@@ -3,13 +3,15 @@ const express = require('express');
 const path = require('path');
 const fs = require('fs');
 const app = express();
+
 const PORT = process.env.PORT || 3000;
 const DATA_FILE = path.join(__dirname, 'data.json');
+const DIST_PATH = path.join(__dirname, 'dist');
 
-// Middleware para JSON
+// Middleware para JSON com limite aumentado
 app.use(express.json({ limit: '50mb' }));
 
-// Inicializa banco de dados se não existir
+// Inicialização segura do arquivo de dados
 if (!fs.existsSync(DATA_FILE)) {
   const initialData = {
     config: {
@@ -71,38 +73,51 @@ if (!fs.existsSync(DATA_FILE)) {
   fs.writeFileSync(DATA_FILE, JSON.stringify(initialData, null, 2));
 }
 
-// 1. Servir arquivos estáticos (prioridade máxima)
-app.use(express.static(path.join(__dirname, 'dist')));
+// 1. Servir arquivos estáticos do diretório dist
+app.use(express.static(DIST_PATH));
 
-// 2. Rotas de API
-app.get('/api/data', (req, res) => {
-  try {
-    const data = fs.readFileSync(DATA_FILE, 'utf8');
-    res.json(JSON.parse(data));
-  } catch (error) {
-    res.status(500).json({ error: 'Erro ao ler dados' });
+// 2. Rotas de API (Processadas antes do fallback de SPA)
+app.use('/api', (req, res, next) => {
+  if (req.path === '/data') {
+    if (req.method === 'GET') {
+      try {
+        const data = fs.readFileSync(DATA_FILE, 'utf8');
+        return res.json(JSON.parse(data));
+      } catch (error) {
+        return res.status(500).json({ error: 'Erro ao ler dados' });
+      }
+    }
+    if (req.method === 'POST') {
+      try {
+        fs.writeFileSync(DATA_FILE, JSON.stringify(req.body, null, 2));
+        return res.json({ success: true });
+      } catch (error) {
+        return res.status(500).json({ error: error.message });
+      }
+    }
   }
+  next();
 });
 
-app.post('/api/data', (req, res) => {
-  try {
-    fs.writeFileSync(DATA_FILE, JSON.stringify(req.body, null, 2));
-    res.json({ success: true });
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
-});
-
-// 3. Fallback para SPA (Mudar para '*' sem barra para evitar PathError)
-// Adicionamos uma verificação simples: se a requisição parece ser para um arquivo (tem ponto), não manda o index.html
-app.get('*', (req, res) => {
+// 3. Fallback de SPA (Ultra compatível)
+// Não usamos app.get('*') para evitar erro de parsing de string de rota.
+// Usamos um middleware final que captura qualquer requisição que sobrou.
+app.use((req, res) => {
+  // Se a requisição for para um arquivo (tem ponto no nome) e não foi encontrada pelo static, retornamos 404 real
+  // Isso evita o erro de "página em branco" onde o browser tenta ler o index.html como se fosse um arquivo .js ou .css
   if (req.path.includes('.') && !req.path.endsWith('.html')) {
     return res.status(404).end();
   }
-  res.sendFile(path.join(__dirname, 'dist', 'index.html'));
+  
+  // Para rotas de navegação do React (ex: /admin, /blog), enviamos o index.html
+  res.sendFile(path.join(DIST_PATH, 'index.html'), (err) => {
+    if (err) {
+      res.status(404).send('Arquivo index.html não encontrado no diretório dist. Verifique o build.');
+    }
+  });
 });
 
-// Inicialização
+// Inicia o servidor escutando em 0.0.0.0 (Obrigatório para Docker/Easypanel)
 app.listen(PORT, '0.0.0.0', () => {
-  console.log(`Servidor rodando na porta ${PORT}`);
+  console.log(`Camerini Server Online na porta ${PORT}`);
 });
