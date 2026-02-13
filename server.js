@@ -93,8 +93,8 @@ app.post('/api/data', (req, res) => {
   }
 });
 
-// SPA Routing - FIXED: Using (.*) or /:path* to avoid path-to-regexp errors in modern Express
-app.get('*', (req, res) => {
+// SPA Routing - FIXED: Using (.*) syntax to avoid 'Missing parameter name' error in strict environments
+app.get('(.*)', (req, res) => {
   res.sendFile(path.join(__dirname, 'dist', 'index.html'));
 });
 
