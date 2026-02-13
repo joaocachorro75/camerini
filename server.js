@@ -6,10 +6,10 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 const DATA_FILE = path.join(__dirname, 'data.json');
 
-// Middleware para JSON com limite aumentado para imagens em base64
+// Middleware para processar JSON (importante para o admin e recepção de leads)
 app.use(express.json({ limit: '50mb' }));
 
-// Inicializa banco de dados se não existir com conteúdo profissional padrão
+// Inicialização do "Banco de Dados" JSON
 if (!fs.existsSync(DATA_FILE)) {
   const initialData = {
     config: {
@@ -71,16 +71,16 @@ if (!fs.existsSync(DATA_FILE)) {
   fs.writeFileSync(DATA_FILE, JSON.stringify(initialData, null, 2));
 }
 
-// 1. Servir arquivos estáticos primeiro
+// 1. Servir arquivos estáticos (CSS, JS, Imagens do dist)
 app.use(express.static(path.join(__dirname, 'dist')));
 
-// 2. Rotas de API
+// 2. Rotas de API (Caminhos fixos sem caracteres curinga)
 app.get('/api/data', (req, res) => {
   try {
     const data = fs.readFileSync(DATA_FILE, 'utf8');
     res.json(JSON.parse(data));
   } catch (error) {
-    res.status(500).json({ error: 'Erro ao ler dados' });
+    res.status(500).json({ error: 'Falha ao ler base de dados' });
   }
 });
 
@@ -93,13 +93,19 @@ app.post('/api/data', (req, res) => {
   }
 });
 
-// 3. Rota catch-all para SPA - CORREÇÃO DEFINITIVA PARA PATH-TO-REGEXP
-// Usamos '/*' em vez de '*' ou '(.*)' para evitar erros de nomes de parâmetros ausentes.
-app.get('/*', (req, res) => {
-  res.sendFile(path.join(__dirname, 'dist', 'index.html'));
+// 3. Fallback para Single Page Application (SPA)
+// SOLUÇÃO PARA EASIPANEL: Em vez de app.get('/*'), usamos um middleware genérico
+// Isso evita que o Express tente analisar o caminho com a biblioteca path-to-regexp,
+// que é o que está causando o erro "Missing parameter name".
+app.use((req, res, next) => {
+  // Se for uma requisição GET, enviamos o index.html
+  if (req.method === 'GET') {
+    return res.sendFile(path.join(__dirname, 'dist', 'index.html'));
+  }
+  next();
 });
 
-// Inicialização
+// Inicia o servidor escutando em todas as interfaces (0.0.0.0) para o Docker/Easypanel
 app.listen(PORT, '0.0.0.0', () => {
-  console.log(`Camerini Terraplanagem rodando na porta ${PORT}`);
+  console.log(`Camerini Terraplanagem está ativa na porta ${PORT}`);
 });
