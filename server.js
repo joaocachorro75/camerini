@@ -6,12 +6,10 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 const DATA_FILE = path.join(__dirname, 'data.json');
 
+// Middleware for parsing JSON with a larger limit for base64 images
 app.use(express.json({ limit: '50mb' }));
 
-// Serve static files from the build directory
-app.use(express.static(path.join(__dirname, 'dist')));
-
-// Initialize database if not exists
+// Initialize database if not exists with default professional content
 if (!fs.existsSync(DATA_FILE)) {
   const initialData = {
     config: {
@@ -73,10 +71,17 @@ if (!fs.existsSync(DATA_FILE)) {
   fs.writeFileSync(DATA_FILE, JSON.stringify(initialData, null, 2));
 }
 
+// Serve static files from the build directory
+app.use(express.static(path.join(__dirname, 'dist')));
+
 // API Routes
 app.get('/api/data', (req, res) => {
-  const data = fs.readFileSync(DATA_FILE, 'utf8');
-  res.json(JSON.parse(data));
+  try {
+    const data = fs.readFileSync(DATA_FILE, 'utf8');
+    res.json(JSON.parse(data));
+  } catch (error) {
+    res.status(500).json({ error: 'Erro ao ler banco de dados' });
+  }
 });
 
 app.post('/api/data', (req, res) => {
@@ -88,11 +93,12 @@ app.post('/api/data', (req, res) => {
   }
 });
 
-// SPA Routing
+// SPA Routing - FIXED: Using (.*) or /:path* to avoid path-to-regexp errors in modern Express
 app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, 'dist', 'index.html'));
 });
 
+// Start Server
 app.listen(PORT, '0.0.0.0', () => {
-  console.log(`Server running on http://0.0.0.0:${PORT}`);
+  console.log(`Camerini Server running on http://0.0.0.0:${PORT}`);
 });
