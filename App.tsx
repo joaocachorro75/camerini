@@ -18,17 +18,30 @@ const App: React.FC = () => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    let isMounted = true;
+    
     const init = async () => {
+      // Timeout de 2 segundos para não ficar preso na tela de carregamento se a rede estiver lenta
+      const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error("Timeout")), 2000)
+      );
+
       try {
-        const remoteData = await db.get();
-        setData(remoteData);
+        // Tenta carregar da API, mas aceita o fallback do db.ts se falhar
+        const remoteData = await Promise.race([db.get(), timeoutPromise]) as AppData;
+        if (isMounted) setData(remoteData);
       } catch (e) {
-        console.error("Failed to load data, but app will continue with defaults.", e);
+        console.warn("Usando dados locais de fallback devido a lentidão ou erro na API.");
+        // Se a API falhar ou der timeout, tenta pegar os dados locais (db.get já faz isso internamente)
+        const localData = await db.get();
+        if (isMounted) setData(localData);
       } finally {
-        setLoading(false);
+        if (isMounted) setLoading(false);
       }
     };
+
     init();
+    return () => { isMounted = false; };
   }, []);
 
   const updateData = async (newData: AppData) => {
@@ -40,7 +53,10 @@ const App: React.FC = () => {
     return (
       <div className="min-h-screen bg-gray-900 flex flex-col items-center justify-center text-white space-y-4">
         <div className="w-16 h-16 border-4 border-amber-500 border-t-transparent rounded-full animate-spin"></div>
-        <p className="font-display font-bold uppercase tracking-widest text-amber-500 animate-pulse">Carregando Camerini...</p>
+        <div className="text-center">
+          <p className="font-display font-bold uppercase tracking-widest text-amber-500 animate-pulse">Camerini Terraplanagem</p>
+          <p className="text-[10px] text-gray-500 mt-2 uppercase tracking-[0.3em]">Preparando sua infraestrutura...</p>
+        </div>
       </div>
     );
   }

@@ -6,10 +6,10 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 const DATA_FILE = path.join(__dirname, 'data.json');
 
-// Middleware for parsing JSON with a larger limit for base64 images
+// Middleware para JSON com limite aumentado para imagens em base64
 app.use(express.json({ limit: '50mb' }));
 
-// Initialize database if not exists with default professional content
+// Inicializa banco de dados se não existir com conteúdo profissional padrão
 if (!fs.existsSync(DATA_FILE)) {
   const initialData = {
     config: {
@@ -71,16 +71,16 @@ if (!fs.existsSync(DATA_FILE)) {
   fs.writeFileSync(DATA_FILE, JSON.stringify(initialData, null, 2));
 }
 
-// Serve static files from the build directory
+// 1. Servir arquivos estáticos primeiro
 app.use(express.static(path.join(__dirname, 'dist')));
 
-// API Routes
+// 2. Rotas de API
 app.get('/api/data', (req, res) => {
   try {
     const data = fs.readFileSync(DATA_FILE, 'utf8');
     res.json(JSON.parse(data));
   } catch (error) {
-    res.status(500).json({ error: 'Erro ao ler banco de dados' });
+    res.status(500).json({ error: 'Erro ao ler dados' });
   }
 });
 
@@ -93,12 +93,13 @@ app.post('/api/data', (req, res) => {
   }
 });
 
-// SPA Routing - FIXED: Using (.*) syntax to avoid 'Missing parameter name' error in strict environments
-app.get('(.*)', (req, res) => {
+// 3. Rota catch-all para SPA - CORREÇÃO DEFINITIVA PARA PATH-TO-REGEXP
+// Usamos '/*' em vez de '*' ou '(.*)' para evitar erros de nomes de parâmetros ausentes.
+app.get('/*', (req, res) => {
   res.sendFile(path.join(__dirname, 'dist', 'index.html'));
 });
 
-// Start Server
+// Inicialização
 app.listen(PORT, '0.0.0.0', () => {
-  console.log(`Camerini Server running on http://0.0.0.0:${PORT}`);
+  console.log(`Camerini Terraplanagem rodando na porta ${PORT}`);
 });
