@@ -63,10 +63,16 @@ export const db = {
   get: async (): Promise<AppData> => {
     try {
       const response = await fetch('/api/data');
-      if (!response.ok) throw new Error('API not available');
+      if (!response.ok) throw new Error('API indisponível');
+      
+      const contentType = response.headers.get('content-type');
+      if (!contentType || !contentType.includes('application/json')) {
+        throw new Error('Resposta da API não é JSON');
+      }
+
       return await response.json();
     } catch (error) {
-      console.warn('Backend API not reachable, falling back to storage/defaults');
+      console.warn('Usando dados locais:', error);
       const local = localStorage.getItem('camerini_fallback');
       if (local) {
         try {
@@ -80,17 +86,14 @@ export const db = {
   },
   save: async (data: AppData) => {
     try {
-      // Always keep local as backup
       localStorage.setItem('camerini_fallback', JSON.stringify(data));
-      
-      const response = await fetch('/api/data', {
+      await fetch('/api/data', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(data)
       });
-      if (!response.ok) throw new Error('Failed to save to server');
     } catch (error) {
-      console.error('Error saving to backend (persisting locally only):', error);
+      console.error('Erro ao salvar no servidor:', error);
     }
   }
 };
