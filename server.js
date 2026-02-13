@@ -5,23 +5,19 @@ const fs = require('fs');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
-
-// Caminhos absolutos garantidos
-const DIST_PATH = path.resolve(__dirname, 'dist');
 const DATA_FILE = path.resolve(__dirname, 'data.json');
-
-console.log('--- Camerini Server Startup ---');
-console.log('Port:', PORT);
-console.log('Dist Path:', DIST_PATH);
-console.log('Data File:', DATA_FILE);
 
 // Middleware
 app.use(express.json({ limit: '50mb' }));
 
+// Health Check para o Easypanel
+app.get('/health', (req, res) => {
+  res.status(200).send('OK');
+});
+
 // Inicialização segura do banco de dados (JSON)
-try {
+const initData = () => {
   if (!fs.existsSync(DATA_FILE)) {
-    console.log('Initial data.json not found. Creating...');
     const initialData = {
       config: {
         logo: 'https://images.unsplash.com/photo-1541888941255-081d746fc2c2?auto=format&fit=crop&q=80&w=400',
@@ -80,11 +76,10 @@ try {
       gallery: []
     };
     fs.writeFileSync(DATA_FILE, JSON.stringify(initialData, null, 2), 'utf8');
-    console.log('data.json created successfully.');
   }
-} catch (err) {
-  console.error('CRITICAL: Failed to initialize data.json:', err.message);
-}
+};
+
+initData();
 
 // Rotas de API
 app.get('/api/data', (req, res) => {
@@ -101,38 +96,21 @@ app.post('/api/data', (req, res) => {
     fs.writeFileSync(DATA_FILE, JSON.stringify(req.body, null, 2), 'utf8');
     res.json({ success: true });
   } catch (error) {
-    console.error('API Post Error:', error.message);
     res.status(500).json({ error: error.message });
   }
 });
 
-// Arquivos Estáticos - Verifica se a pasta existe para não quebrar o Express
-if (fs.existsSync(DIST_PATH)) {
-  app.use(express.static(DIST_PATH));
-} else {
-  console.warn('WARNING: Dist directory not found at:', DIST_PATH);
-}
+// Arquivos Estáticos - Servindo da raiz
+app.use(express.static(__dirname));
 
-// Fallback SPA - Corrigido para ser compatível com todas as versões do Express
+// Fallback SPA
 app.get('*', (req, res) => {
-  // Evita loops infinitos ou servir HTML para assets perdidos
   if (req.path.includes('.')) {
-    return res.status(404).send('Asset not found');
+    return res.status(404).send('Not found');
   }
-
-  const indexPath = path.resolve(DIST_PATH, 'index.html');
-  if (fs.existsSync(indexPath)) {
-    res.sendFile(indexPath);
-  } else {
-    res.status(200).send('Camerini Server Online - Building frontend... Aguarde alguns instantes e atualize a página.');
-  }
+  res.sendFile(path.resolve(__dirname, 'index.html'));
 });
 
-// Listen em 0.0.0.0 é obrigatório para Docker
-app.listen(PORT, '0.0.0.0', (err) => {
-  if (err) {
-    console.error('Failed to start server:', err);
-    process.exit(1);
-  }
-  console.log(`>>> Server running on http://0.0.0.0:${PORT}`);
+app.listen(PORT, '0.0.0.0', () => {
+  console.log(`>>> Camerini Server listening on 0.0.0.0:${PORT}`);
 });
