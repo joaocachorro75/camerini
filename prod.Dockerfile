@@ -21,14 +21,18 @@ FROM node:18-alpine
 
 WORKDIR /app
 
-# Install simple static server
-RUN npm install -g serve
+# Install express for the backend
+RUN npm install express
 
-# Copy built files from build stage
-COPY --from=build /app/dist /app/dist
+# Copy only necessary files
+COPY --from=build /app/dist ./dist
+COPY --from=build /app/server.js ./server.js
 
-# Expose port
+# Create empty data file if needed, but the server handles it
+# RUN echo "{}" > data.json
+
+# Expose port 3000
 EXPOSE 3000
 
-# Start serving the application
-CMD ["serve", "-s", "dist", "-l", "3000"]
+# Start the Node.js server
+CMD ["node", "server.js"]

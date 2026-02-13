@@ -22,7 +22,8 @@ import {
   MapPin,
   Globe,
   Monitor,
-  ChevronRight
+  ChevronRight,
+  MessageCircle
 } from 'lucide-react';
 
 interface AdminDashboardProps {
@@ -238,26 +239,38 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ data, onUpdate }) => {
             </div>
           </div>
 
-          {/* CONTACT & FOOTER */}
+          {/* CONTACT & WHATSAPP BUTTON */}
           <div className="bg-white p-8 rounded-[2.5rem] shadow-sm border border-gray-100 space-y-6 lg:col-span-2">
-            <h3 className="font-bold text-gray-900 flex items-center gap-2 text-lg"><MapPin size={20} className="text-amber-500"/> Contato e Rodapé</h3>
+            <h3 className="font-bold text-gray-900 flex items-center gap-2 text-lg"><MessageCircle size={20} className="text-green-500"/> Configuração WhatsApp e Contato</h3>
             <div className="grid md:grid-cols-3 gap-6">
                <div className="space-y-4">
-                  <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Informações Diretas</label>
-                  <input type="text" placeholder="Endereço" value={config.contact.address} onChange={e => setConfig({...config, contact: {...config.contact, address: e.target.value}})} className="w-full p-3 border rounded-xl text-sm" />
-                  <input type="text" placeholder="WhatsApp (55...)" value={config.contact.whatsapp} onChange={e => setConfig({...config, contact: {...config.contact, whatsapp: e.target.value}})} className="w-full p-3 border rounded-xl text-sm" />
-                  <input type="text" placeholder="E-mail" value={config.contact.email} onChange={e => setConfig({...config, contact: {...config.contact, email: e.target.value}})} className="w-full p-3 border rounded-xl text-sm" />
+                  <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Informações de Atendimento</label>
+                  <input type="text" placeholder="Endereço" value={config.contact.address} onChange={e => setConfig({...config, contact: {...config.contact, address: e.target.value}})} className="w-full p-4 border rounded-2xl bg-gray-50 text-sm" />
+                  <div className="relative">
+                    <MessageCircle className="absolute right-4 top-4 text-green-500" size={18} />
+                    <input 
+                      type="text" 
+                      placeholder="WhatsApp (Só números: 5511...)" 
+                      value={config.contact.whatsapp} 
+                      onChange={e => setConfig({...config, contact: {...config.contact, whatsapp: e.target.value.replace(/\D/g, '')}})} 
+                      className="w-full p-4 border rounded-2xl bg-gray-50 text-sm font-bold text-green-700" 
+                    />
+                  </div>
+                  <input type="text" placeholder="E-mail" value={config.contact.email} onChange={e => setConfig({...config, contact: {...config.contact, email: e.target.value}})} className="w-full p-4 border rounded-2xl bg-gray-50 text-sm" />
                </div>
                <div className="space-y-4">
-                  <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Redes Sociais (Links)</label>
-                  <input type="text" placeholder="Instagram URL" value={config.contact.instagram} onChange={e => setConfig({...config, contact: {...config.contact, instagram: e.target.value}})} className="w-full p-3 border rounded-xl text-sm" />
-                  <input type="text" placeholder="Facebook URL" value={config.contact.facebook} onChange={e => setConfig({...config, contact: {...config.contact, facebook: e.target.value}})} className="w-full p-3 border rounded-xl text-sm" />
+                  <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Links de Redes Sociais</label>
+                  <input type="text" placeholder="Instagram URL" value={config.contact.instagram} onChange={e => setConfig({...config, contact: {...config.contact, instagram: e.target.value}})} className="w-full p-4 border rounded-2xl bg-gray-50 text-sm" />
+                  <input type="text" placeholder="Facebook URL" value={config.contact.facebook} onChange={e => setConfig({...config, contact: {...config.contact, facebook: e.target.value}})} className="w-full p-4 border rounded-2xl bg-gray-50 text-sm" />
                </div>
                <div className="space-y-4">
                   <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Rodapé (Footer)</label>
-                  <textarea placeholder="Texto de copyright" value={config.footer.copyright} onChange={e => setConfig({...config, footer: {...config.footer, copyright: e.target.value}})} className="w-full p-3 border rounded-xl text-xs h-16" />
-                  <textarea placeholder="Keywords SEO" value={config.footer.seoKeywords} onChange={e => setConfig({...config, footer: {...config.footer, seoKeywords: e.target.value}})} className="w-full p-3 border rounded-xl text-[10px] h-16" />
+                  <textarea placeholder="Texto de copyright" value={config.footer.copyright} onChange={e => setConfig({...config, footer: {...config.footer, copyright: e.target.value}})} className="w-full p-4 border rounded-2xl bg-gray-50 text-xs h-20" />
+                  <textarea placeholder="Keywords SEO (Separe por | )" value={config.footer.seoKeywords} onChange={e => setConfig({...config, footer: {...config.footer, seoKeywords: e.target.value}})} className="w-full p-4 border rounded-2xl bg-gray-50 text-[10px] h-20" />
                </div>
+            </div>
+            <div className="bg-amber-50 p-4 rounded-2xl border border-amber-100 text-amber-700 text-xs font-medium">
+              Nota: O número do WhatsApp deve conter apenas números, iniciando com o código do país (ex: 55 para Brasil). Este número controla o botão flutuante e os CTAs da página.
             </div>
           </div>
         </div>

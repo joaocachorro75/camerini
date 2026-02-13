@@ -13,17 +13,37 @@ import LoginPage from './pages/LoginPage';
 import AdminDashboard from './pages/AdminDashboard';
 
 const App: React.FC = () => {
-  const [data, setData] = useState<AppData>(db.get());
+  const [data, setData] = useState<AppData | null>(null);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    db.save(data);
-  }, [data]);
+    const init = async () => {
+      try {
+        const remoteData = await db.get();
+        setData(remoteData);
+      } catch (e) {
+        console.error("Failed to load data, but app will continue with defaults.", e);
+      } finally {
+        setLoading(false);
+      }
+    };
+    init();
+  }, []);
 
-  const updateData = (newData: AppData) => {
+  const updateData = async (newData: AppData) => {
     setData(newData);
-    db.save(newData);
+    await db.save(newData);
   };
+
+  if (loading || !data) {
+    return (
+      <div className="min-h-screen bg-gray-900 flex flex-col items-center justify-center text-white space-y-4">
+        <div className="w-16 h-16 border-4 border-amber-500 border-t-transparent rounded-full animate-spin"></div>
+        <p className="font-display font-bold uppercase tracking-widest text-amber-500 animate-pulse">Carregando Camerini...</p>
+      </div>
+    );
+  }
 
   return (
     <HashRouter>

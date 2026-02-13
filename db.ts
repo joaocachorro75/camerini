@@ -54,34 +54,43 @@ const INITIAL_DATA: AppData = {
     { id: '1', name: 'Ricardo Almeida', role: 'Diretor de Operações', text: 'A Camerini é nossa parceira estratégica. Cumprem prazos rigorosos.', rating: 5 },
     { id: '2', name: 'Cláudia Santos', role: 'Arquiteta', text: 'O nivelamento feito no meu último projeto foi perfeito.', rating: 5 }
   ],
-  blog: [
-    {
-      id: '1',
-      title: 'Como escolher o serviço de terraplanagem ideal?',
-      slug: 'como-escolher-terraplanagem',
-      excerpt: 'Entenda os principais pontos para garantir que a base da sua obra seja sólida.',
-      content: '<p>A terraplanagem é a fundação de qualquer empreendimento...</p>',
-      image: 'https://images.unsplash.com/photo-1533991022833-2fd495cec58a?auto=format&fit=crop&q=80&w=800',
-      date: '2024-03-22',
-      metaDescription: 'Dicas fundamentais para contratação de serviços de terraplanagem.'
-    }
-  ],
+  blog: [],
   leads: [],
-  gallery: [
-    { id: '1', url: 'https://images.unsplash.com/photo-1579451433434-738965823902?auto=format&fit=crop&q=80&w=800', type: 'image', alt: 'Escavadeira' },
-    { id: '2', url: 'https://images.unsplash.com/photo-1589939705384-5185137a7f0f?auto=format&fit=crop&q=80&w=800', type: 'image', alt: 'Maquinário' },
-    { id: '3', url: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ', type: 'video', alt: 'Vídeo Demonstrativo' }
-  ]
+  gallery: []
 };
 
-const STORAGE_KEY = 'camerini_site_data_v3';
-
 export const db = {
-  get: (): AppData => {
-    const data = localStorage.getItem(STORAGE_KEY);
-    return data ? JSON.parse(data) : INITIAL_DATA;
+  get: async (): Promise<AppData> => {
+    try {
+      const response = await fetch('/api/data');
+      if (!response.ok) throw new Error('API not available');
+      return await response.json();
+    } catch (error) {
+      console.warn('Backend API not reachable, falling back to storage/defaults');
+      const local = localStorage.getItem('camerini_fallback');
+      if (local) {
+        try {
+          return JSON.parse(local);
+        } catch (e) {
+          return INITIAL_DATA;
+        }
+      }
+      return INITIAL_DATA;
+    }
   },
-  save: (data: AppData) => {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+  save: async (data: AppData) => {
+    try {
+      // Always keep local as backup
+      localStorage.setItem('camerini_fallback', JSON.stringify(data));
+      
+      const response = await fetch('/api/data', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data)
+      });
+      if (!response.ok) throw new Error('Failed to save to server');
+    } catch (error) {
+      console.error('Error saving to backend (persisting locally only):', error);
+    }
   }
 };
