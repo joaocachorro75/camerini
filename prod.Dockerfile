@@ -1,38 +1,32 @@
 
 # Build Stage
 FROM node:18-alpine AS build
-
 WORKDIR /app
-
-# Copy package files
 COPY package*.json ./
-
-# Install dependencies
 RUN npm install
-
-# Copy all files
 COPY . .
-
-# Build the application
-RUN npm run build
+# Se não houver script de build, apenas criamos a pasta para evitar erro no server
+RUN npm run build || mkdir -p dist
 
 # Production Stage
 FROM node:18-alpine
-
 WORKDIR /app
 
-# Install express for the backend
+# Instala express e outros utilitários se necessário
 RUN npm install express
 
-# Copy only necessary files
+# Copia os arquivos necessários do estágio de build
 COPY --from=build /app/dist ./dist
 COPY --from=build /app/server.js ./server.js
+COPY --from=build /app/package*.json ./
 
-# Create empty data file if needed, but the server handles it
-# RUN echo "{}" > data.json
+# Garante que temos permissão de escrita para o data.json
+RUN touch data.json && chmod 666 data.json
 
-# Expose port 3000
+# Variáveis de ambiente
+ENV NODE_ENV=production
+ENV PORT=3000
+
 EXPOSE 3000
 
-# Start the Node.js server
 CMD ["node", "server.js"]

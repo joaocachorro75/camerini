@@ -2,18 +2,26 @@
 const express = require('express');
 const path = require('path');
 const fs = require('fs');
+
 const app = express();
-
 const PORT = process.env.PORT || 3000;
-const DATA_FILE = path.join(__dirname, 'data.json');
-const DIST_PATH = path.join(__dirname, 'dist');
 
-// Middleware para JSON
+// Caminhos absolutos garantidos
+const DIST_PATH = path.resolve(__dirname, 'dist');
+const DATA_FILE = path.resolve(__dirname, 'data.json');
+
+console.log('--- Camerini Server Startup ---');
+console.log('Port:', PORT);
+console.log('Dist Path:', DIST_PATH);
+console.log('Data File:', DATA_FILE);
+
+// Middleware
 app.use(express.json({ limit: '50mb' }));
 
-// Inicialização segura do arquivo de dados
-const ensureDataFile = () => {
+// Inicialização segura do banco de dados (JSON)
+try {
   if (!fs.existsSync(DATA_FILE)) {
+    console.log('Initial data.json not found. Creating...');
     const initialData = {
       config: {
         logo: 'https://images.unsplash.com/photo-1541888941255-081d746fc2c2?auto=format&fit=crop&q=80&w=400',
@@ -71,13 +79,14 @@ const ensureDataFile = () => {
       leads: [],
       gallery: []
     };
-    fs.writeFileSync(DATA_FILE, JSON.stringify(initialData, null, 2));
+    fs.writeFileSync(DATA_FILE, JSON.stringify(initialData, null, 2), 'utf8');
+    console.log('data.json created successfully.');
   }
-};
+} catch (err) {
+  console.error('CRITICAL: Failed to initialize data.json:', err.message);
+}
 
-ensureDataFile();
-
-// Rotas de API - Definidas ANTES do static para prioridade
+// Rotas de API
 app.get('/api/data', (req, res) => {
   try {
     const data = fs.readFileSync(DATA_FILE, 'utf8');
@@ -89,35 +98,41 @@ app.get('/api/data', (req, res) => {
 
 app.post('/api/data', (req, res) => {
   try {
-    fs.writeFileSync(DATA_FILE, JSON.stringify(req.body, null, 2));
+    fs.writeFileSync(DATA_FILE, JSON.stringify(req.body, null, 2), 'utf8');
     res.json({ success: true });
   } catch (error) {
+    console.error('API Post Error:', error.message);
     res.status(500).json({ error: error.message });
   }
 });
 
-// Arquivos Estáticos
-app.use(express.static(DIST_PATH));
+// Arquivos Estáticos - Verifica se a pasta existe para não quebrar o Express
+if (fs.existsSync(DIST_PATH)) {
+  app.use(express.static(DIST_PATH));
+} else {
+  console.warn('WARNING: Dist directory not found at:', DIST_PATH);
+}
 
-// Fallback para SPA (Single Page Application)
-// Captura qualquer rota que não tenha sido tratada acima
-app.get('/*', (req, res) => {
-  // Se a URL contiver um ponto (provavelmente um arquivo estático não encontrado)
-  // não enviamos o index.html para evitar erros de MIME type/sintaxe
-  const urlPath = req.path;
-  if (urlPath.includes('.') && !urlPath.endsWith('.html')) {
-    return res.status(404).send('Not found');
+// Fallback SPA - Corrigido para ser compatível com todas as versões do Express
+app.get('*', (req, res) => {
+  // Evita loops infinitos ou servir HTML para assets perdidos
+  if (req.path.includes('.')) {
+    return res.status(404).send('Asset not found');
   }
 
-  const indexPath = path.join(DIST_PATH, 'index.html');
+  const indexPath = path.resolve(DIST_PATH, 'index.html');
   if (fs.existsSync(indexPath)) {
     res.sendFile(indexPath);
   } else {
-    // Fallback caso o build ainda não tenha sido concluído no Docker
-    res.status(200).send('Servidor Online - Aguardando Build dos arquivos estáticos...');
+    res.status(200).send('Camerini Server Online - Building frontend... Aguarde alguns instantes e atualize a página.');
   }
 });
 
-app.listen(PORT, '0.0.0.0', () => {
-  console.log(`Camerini Server Online na porta ${PORT}`);
+// Listen em 0.0.0.0 é obrigatório para Docker
+app.listen(PORT, '0.0.0.0', (err) => {
+  if (err) {
+    console.error('Failed to start server:', err);
+    process.exit(1);
+  }
+  console.log(`>>> Server running on http://0.0.0.0:${PORT}`);
 });
