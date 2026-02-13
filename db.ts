@@ -1,5 +1,5 @@
 
-import { AppData } from './types';
+import { AppData } from './types.ts';
 
 const INITIAL_DATA: AppData = {
   config: {
@@ -64,24 +64,11 @@ export const db = {
     try {
       const response = await fetch('/api/data');
       if (!response.ok) throw new Error('API indisponível');
-      
-      const contentType = response.headers.get('content-type');
-      if (!contentType || !contentType.includes('application/json')) {
-        throw new Error('Resposta da API não é JSON');
-      }
-
       return await response.json();
     } catch (error) {
       console.warn('Usando dados locais:', error);
       const local = localStorage.getItem('camerini_fallback');
-      if (local) {
-        try {
-          return JSON.parse(local);
-        } catch (e) {
-          return INITIAL_DATA;
-        }
-      }
-      return INITIAL_DATA;
+      return local ? JSON.parse(local) : INITIAL_DATA;
     }
   },
   save: async (data: AppData) => {

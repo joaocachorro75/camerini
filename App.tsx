@@ -1,16 +1,16 @@
 
 import React, { useState, useEffect } from 'react';
 import { HashRouter, Routes, Route, Navigate } from 'react-router-dom';
-import { db } from './db';
-import { AppData } from './types';
+import { db } from './db.ts';
+import { AppData } from './types.ts';
 
 // Pages
-import LandingPage from './pages/LandingPage';
-import BlogPostPage from './pages/BlogPostPage';
-import BlogListPage from './pages/BlogListPage';
-import GalleryPage from './pages/GalleryPage';
-import LoginPage from './pages/LoginPage';
-import AdminDashboard from './pages/AdminDashboard';
+import LandingPage from './pages/LandingPage.tsx';
+import BlogPostPage from './pages/BlogPostPage.tsx';
+import BlogListPage from './pages/BlogListPage.tsx';
+import GalleryPage from './pages/GalleryPage.tsx';
+import LoginPage from './pages/LoginPage.tsx';
+import AdminDashboard from './pages/AdminDashboard.tsx';
 
 const App: React.FC = () => {
   const [data, setData] = useState<AppData | null>(null);
@@ -19,27 +19,16 @@ const App: React.FC = () => {
 
   useEffect(() => {
     let isMounted = true;
-    
     const init = async () => {
-      // Timeout de 2 segundos para não ficar preso na tela de carregamento se a rede estiver lenta
-      const timeoutPromise = new Promise((_, reject) => 
-        setTimeout(() => reject(new Error("Timeout")), 2000)
-      );
-
       try {
-        // Tenta carregar da API, mas aceita o fallback do db.ts se falhar
-        const remoteData = await Promise.race([db.get(), timeoutPromise]) as AppData;
+        const remoteData = await db.get();
         if (isMounted) setData(remoteData);
       } catch (e) {
-        console.warn("Usando dados locais de fallback devido a lentidão ou erro na API.");
-        // Se a API falhar ou der timeout, tenta pegar os dados locais (db.get já faz isso internamente)
-        const localData = await db.get();
-        if (isMounted) setData(localData);
+        console.warn("Erro ao carregar dados:", e);
       } finally {
         if (isMounted) setLoading(false);
       }
     };
-
     init();
     return () => { isMounted = false; };
   }, []);
